@@ -32,40 +32,50 @@ export const registerUser = async (req, res, next) => {
 }
 
 export const loginUser = async (req, res, next) => {
-  try {
-   //validate user input
-   const { error, value } = loginUserValidator.validate(req.body);
-   if (error) {
-      return res.status(422).json(error);
+   try {
+      //validate user input
+      const { error, value } = loginUserValidator.validate(req.body);
+      if (error) {
+         return res.status(422).json(error);
+      }
+      //find one user with identifier
+      const user = await UserModel.findOne({ email: value.email });
+      if (!user) {
+         return res.status(404).json('User does not exist!');
+      }
+      //compare their passwords
+      const correctPassword = bcrypt.compareSync(value.password, user.password);
+      if (!correctPassword) {
+         return res.status(401).json('Invalid credentials!');
+      }
+      //sign a token for the user
+      const token = jwt.sign
+         ({ id: user.id },
+            process.env.JWT_PRIVATE_KEY,
+            { expiresIn: '24h' }
+         );
+      //respond to request
+      res.json({
+         message: 'User logged in!',
+         accessToken: token
+      })
+   } catch (error) {
+      next(error);
    }
-   //find one user with identifier
-   const user = await UserModel.findOne({ email: value.email});
-   if (!user) {
-      return res.status(404).json('User does not exist!');
-   }
-   //compare their passwords
-   const correctPassword = bcrypt.compareSync(value.password, user.password);
-   if (!correctPassword) {
-      return res.status(401).json('Invalid credentials!');
-   }
-   //sign a token for the user
-   const token = jwt.sign
-   ({id: user.id},
-     process.env.JWT_PRIVATE_KEY,
-     {expiresIn: '24h'}
-   );
-   //respond to request
-    res.json({
-      message: 'User logged in!',
-      accessToken: token 
-    })
-  } catch (error) {
-   next(error);
-  }
 }
 
-export const getProfile = (req, res, next) => {
-   res.json('User profile')
+export const getProfile = async (req, res, next) => {
+   try {
+      console.log(req.auth);
+      //find authenticated user from database
+      const user = await UserModel
+         .findById(req.auth.id)
+         .select({ password: false });
+      //respond to request
+      res.json(user);
+   } catch (error) {
+      next(error);
+   }
 }
 
 export const logoutUser = (req, res, next) => {
