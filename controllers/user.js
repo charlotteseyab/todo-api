@@ -1,4 +1,4 @@
-import { registerUserValidator, loginUserValidator } from "../validators/user.js";
+import { registerUserValidator, loginUserValidator, updateProfileValidator } from "../validators/user.js";
 import { UserModel } from "../models/user.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -83,5 +83,11 @@ export const logoutUser = (req, res, next) => {
 }
 
 export const updateProfile = (req, res, next) => {
-   res.json('profile has been updated')
+   try {
+      //Validate user input
+      const { error, value } = updateProfileValidator.validate(req.body);
+      res.json('profile has been updated')
+   } catch (error) {
+      next(error);
+   }
 }
